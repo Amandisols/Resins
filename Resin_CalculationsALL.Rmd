@@ -1,0 +1,234 @@
+---
+title: "Deployment_1v2"
+author: "Amanda Pennino"
+date: "3/23/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r echo = FALSE}
+library(tidyverse)
+
+```
+
+Read in data
+Refine to analytes of interest
+Convert everything from ppb to ppm (mg/L)
+```{r echo = FALSE}
+# STOP! 
+## Make these changes to ICP data. Rename excel file: YYYY_MM_DD
+### Then, change sheet "Amanda" to "Amanda_raw". Copy data to new sheet "Amanda_raw2". Set red analyte values to "0"
+#### Amanda_raw 2: Add columns and Insert information related to this extraction run, in Amanda_raw2: Sample_id, Well_id, Extraction, Replicate, Total_resin_g, Initial_g, AfterE1_g
+##### Change resin blanks to well_id 99_99, use 1 as the total weight so that the multiplication works out
+
+###RENAME THE COLUMNS. USE PREVIOUS SHEET TO GET COLUMN NAMES
+#### CONVERT TO A CSV
+
+rm(list = ls())
+
+csv_dir = "~/Documents/VT/Data/MyData/Code/Resins/data/raw_csv"
+# FILE = "2019_12_13.csv" #Deployment1
+# FILE = "2020_03_24.csv" #Deployment2
+# FILE = "2020_07_02.csv" #Deployment3
+FILE = "2020_10_20.csv" #Deployment4
+
+filePath <- paste(csv_dir, FILE, sep = "/") 
+
+DATA <- read_csv(filePath) %>% 
+  select("Durham_id", "Sample_id", "Well_id", "Extraction", "Replicate", "Total_resin_g", "Na", "Mg", "Al", "P", "S", "Ca", "Fe", "Mn" )
+
+DATA$S <- DATA$S * 1000
+DATA[, 7:14] <- DATA[, 7:14]/1000
+
+```
+
+Remove below ICP detection limits and subtract out ICP blanks
+```{r}
+
+ICPMS_detlim <- read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/VT_ICPMS_detlimit.csv") %>% 
+  select("Na", "Mg", "Al", "P", "S", "Ca", "Fe", "Mn" )
+
+ICPMS_detlim <- ICPMS_detlim[1,]
+ICPMS_detlim <- ICPMS_detlim /1000 #ppb to ppm
+
+DATA$Na[DATA$Na < ICPMS_detlim$Na] <- 0
+DATA$Mg[DATA$Mg < ICPMS_detlim$Mg] <- 0
+DATA$Al[DATA$Al < ICPMS_detlim$Al] <- 0
+DATA$P[DATA$P < ICPMS_detlim$P] <- 0
+DATA$S[DATA$S < ICPMS_detlim$S] <- 0
+DATA$Ca[DATA$Ca < ICPMS_detlim$Ca] <- 0
+DATA$Fe[DATA$Fe < ICPMS_detlim$Fe] <- 0
+DATA$Mn[DATA$Mn < ICPMS_detlim$Mn] <- 0
+
+
+ICP_blanks <- DATA[which(DATA$Sample_id == "ICP_blank"), ]
+ICP_blanks$Deployment <- 4
+
+DATA <- DATA[which(DATA$Sample_id != "ICP_blank"), ]
+
+ICP_means <- ICP_blanks %>%
+  summarise_at(.vars = vars(Na:Mn), .funs = mean, na.rm =T) 
+
+#Subtract ICP mean, and then set anything negative to 0
+DATA$Na <- DATA$Na - ICP_means$Na
+DATA$Na[DATA$Na < 0] <- 0
+DATA$Mg <- DATA$Mg - ICP_means$Mg
+DATA$Mg[DATA$Mg < 0] <- 0
+DATA$Al <- DATA$Al - ICP_means$Al 
+DATA$Al[DATA$Al < 0] <- 0
+DATA$P <- DATA$P - ICP_means$P 
+DATA$P[DATA$P < 0] <- 0
+DATA$S <- DATA$S - ICP_means$S
+DATA$S[DATA$S < 0] <- 0
+DATA$Ca <- DATA$Ca - ICP_means$Ca
+DATA$Ca[DATA$Ca < 0] <- 0
+DATA$Fe <- DATA$Fe - ICP_means$Fe 
+DATA$Fe[DATA$Fe < 0] <- 0
+DATA$Mn <- DATA$Mn - ICP_means$Mn
+DATA$Mn[DATA$Mn < 0] <- 0
+
+
+```
+
+
+Go in and check for outliers!
+Resin math.
+```{r}
+
+Extractant_L <- 0.24
+Dilution_factor <- 200   #200 for the last two deployments. Check emails!
+
+DATA[, 7:14] <- DATA[, 7:14] * Extractant_L * Dilution_factor
+
+```
+
+
+Deal with blanks.
+THIS WILL BE DIFFERENT FOR EACH DEPLOYMENT.
+For deployment 1.. the sulfur looks really high.
+For deployment 3/4... use average blank values for Deployment 1 and 2 for sodium. Numbers look funny. 
+```{r}
+
+resin_blanks <- DATA[which(DATA$Well_id == "99_99"), ]
+# #resin_blanks <- resin_blanks[1:4, ] #For deployment 1 because there was only 2 blank replicates.
+# 
+resin_blanks$Deployment <- 4
+
+
+#Use resin blanks from deployment 2, because it was the same type of resin !!
+#resin_blanks = read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/resin_blanks2.csv")
+
+resin_means = resin_blanks %>%
+  summarise_at(.vars = vars(Na:Mn), .funs = mean) #take mean, not sum because you're just getting the resin with nothing attached
+
+
+
+
+
+DATA <- DATA[which(DATA$Well_id != "99_99"), ]
+
+#Subtract ICP mean, and then set anything negative to 0
+DATA$Na <- DATA$Na - resin_means$Na
+DATA$Na[DATA$Na < 0] <- 0
+DATA$Mg <- DATA$Mg - resin_means$Mg
+DATA$Mg[DATA$Mg < 0] <- 0
+DATA$Al <- DATA$Al - resin_means$Al 
+DATA$Al[DATA$Al < 0] <- 0
+DATA$P <- DATA$P - resin_means$P 
+DATA$P[DATA$P < 0] <- 0
+DATA$S <- DATA$S - resin_means$S
+DATA$S[DATA$S < 0] <- 0
+DATA$Ca <- DATA$Ca - resin_means$Ca
+DATA$Ca[DATA$Ca < 0] <- 0
+DATA$Fe <- DATA$Fe - resin_means$Fe 
+DATA$Fe[DATA$Fe < 0] <- 0
+DATA$Mn <- DATA$Mn - resin_means$Mn
+DATA$Mn[DATA$Mn < 0] <- 0
+
+
+
+```
+
+Add extractions 1 and 2. Look for any oddities between replicates.
+Average all three extractions.
+Scale up. 
+
+FOR DEPLOYMENT 3: 52_4.. missing some weight. use an average of weights from that round (82.5)
+```{r}
+
+total_weights <- DATA %>%
+  group_by(Well_id) %>%
+  summarise_at(.vars = vars(Total_resin_g), .funs = mean, na.rm =T)
+
+#total_weights$Total_resin_g[total_weights$Well_id == "52_4"] <-79.5
+
+DATA <- DATA %>%
+  group_by(Well_id, Replicate) %>%
+  summarise_at(.vars = vars(Na:Mn), .funs = sum, na.rm =T)  
+
+DATA = DATA %>%
+  group_by(Well_id) %>%
+  summarise_at(.vars = vars(Na:Mn), .funs = mean, na.rm =T) 
+
+DATA <- left_join(DATA, total_weights, by = "Well_id")
+DATA$Initial_g <- 20
+DATA$weightScaler <- DATA$Total_resin_g / DATA$Initial_g
+
+
+DATA[,2:9]  <- DATA[,2:9] * DATA$weightScaler * 1.0501 #This is a factor that accounts for the CPVC
+
+
+```
+
+Change deployment name.
+read out as processed csv.
+```{r}
+
+DATA$Deployment <- 4
+
+DATA <- DATA %>%
+  select(-c(Total_resin_g, weightScaler))
+
+out_dir <- "~/Documents/VT/Data/MyData/Code/Resins/data/processed"
+
+write_csv(DATA, paste(out_dir, "Deployment4.csv", sep = "/"))
+
+
+```
+
+########################################################### 
+    AGGREGATION OF ALL DEPLOYMENTS AND ADDING DOC DATA
+###########################################################
+
+ADD DOC HERE!!!!
+```{r}
+
+DEP1 = read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/Deployment1.csv")
+DEP2 = read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/Deployment2.csv")
+DEP3 = read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/Deployment3.csv")
+DEP4 = read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/Deployment4.csv")
+
+
+DEP1$DOC <- c(90.23, 27.90, 10.49, 351.32, 265.83, 12.90, 26.55, NA, NA)
+DEP2$DOC <- c(377.92, 171.25, 32.61, 765.59, 385.08, 45.01, 38.83, 237.04, 297.44)
+DEP3$DOC <- c(23.26, 147.10, 15.09, 2179.25, 354.45, 18.11, 13.75, 396.39, 555.52)
+DEP4$DOC <- c(33.57, 36.64, 16.46, 538.68, 170.32, 15.84, 61.25, 45.26, 3.55, 411.61)
+
+#L1: annual: 411.61 g
+
+
+temp <- bind_rows(DEP1, DEP2)
+temp <- bind_rows(temp, DEP3)
+ALL <- bind_rows(temp, DEP4)
+ALL <-ALL %>% select(-c("Initial_g"))
+
+out_dir <- "~/Documents/VT/Data/MyData/Code/Resins/data/processed"
+
+write_csv(ALL, paste(out_dir, "Resin_ALL.csv", sep = "/"))
+
+totals <- ALL %>%
+  group_by(Well_id) %>%
+  summarise_at(.vars = vars(Na:DOC), .funs = sum, na.rm =T) 
+
+```

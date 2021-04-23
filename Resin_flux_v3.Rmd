@@ -1,0 +1,275 @@
+---
+title: "Resin fluxes"
+author: "Amanda"
+date: "03/21/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Well depths
+```{r}
+# library(xts)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(gridExtra)
+library(zoo)
+library(lubridate)
+
+library(tidyverse)
+
+
+```
+#Deployent dates
+#1: 51 days, Aug 12-Oct 2
+#2: 116 days, Oct 3-Jan 27
+#3: 114 days, Jan 28-May 20
+#4: 84 days, May 21- Aug 12
+
+```{r}
+
+#Check format
+DATE1 = "2019-08-12 00:00:00"
+DATE2 = "2019-10-03 00:00:00"
+DATE3 = "2020-01-27 00:00:00"
+DATE4 = "2020-05-20 00:00:00"
+# DATE6 = "2020-08-12 :00:00:00" #barometric pressure still not yet recovered.
+```
+
+
+
+42_2_s1, WT data until 06/27/20. Then, logger ran out and the barometric pressure file never recovered.
+Total depth from surface: 30.3 cm
+```{r}
+#Data and transformations
+
+WT1 <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_2_s1/Updated_42_2_s1.csv")
+
+# WT1$Date.Time <- as.POSIXct(WT1$Date.Time, format = "%m/%d/%y %H:%M") 
+
+
+WT1.1 <- WT1 %>% filter(DateTime <= DATE2 & DateTime >= DATE1)
+WT1.2 <- WT1 %>% filter(DateTime <= DATE3 & DateTime >= DATE2)
+WT1.3 <- WT1 %>% filter(DateTime <= DATE4 & DateTime >= DATE3)
+
+#plot(WT1.2$DateTime, WT1.2$waterDepth_m, type = "l")
+
+#find average height in cm, then divide by resin height
+
+#average height in cm
+WT1.1_meanH <- (mean(WT1.1$waterDepth_m, na.rm = TRUE) + 0.303)*100
+WT1.2_meanH <- (mean(WT1.2$waterDepth_m, na.rm = TRUE) + 0.303)*100
+WT1.3_meanH<- (mean(WT1.3$waterDepth_m, na.rm = TRUE) + 0.303)*100
+
+#average depth in cm
+WT1.1_meanD <- mean(WT1.1$waterDepth_m, na.rm = TRUE)*100
+WT1.2_meanD <- mean(WT1.2$waterDepth_m, na.rm = TRUE)*100
+WT1.3_meanD <- mean(WT1.3$waterDepth_m, na.rm = TRUE)*100
+
+
+
+
+#########################
+
+WT2 <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_3_s1/Updated_42_3_s1.csv")
+
+# WT1$Date.Time <- as.POSIXct(WT1$Date.Time, format = "%m/%d/%y %H:%M") 
+
+
+WT2.1 <- WT2 %>% filter(DateTime <= DATE2 & DateTime >= DATE1)
+WT2.2 <- WT2 %>% filter(DateTime <= DATE3 & DateTime >= DATE2)
+WT2.3 <- WT2 %>% filter(DateTime <= DATE4 & DateTime >= DATE3)
+
+#average height in cm
+WT2.1_meanH <- (mean(WT2.1$waterDepth_m, na.rm = TRUE) + 0.453)*100
+WT2.2_meanH <- (mean(WT2.2$waterDepth_m, na.rm = TRUE) + 0.453)*100
+WT2.3_meanH<- (mean(WT2.3$waterDepth_m, na.rm = TRUE) + 0.453)*100
+
+#average depth in cm
+WT2.1_meanD <- mean(WT2.1$waterDepth_m, na.rm = TRUE)*100
+WT2.2_meanD <- mean(WT2.2$waterDepth_m, na.rm = TRUE)*100
+WT2.3_meanD <- mean(WT2.3$waterDepth_m, na.rm = TRUE)*100
+
+
+
+#########################
+
+
+WT3 <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/52_4_s3/Updated_52_4_s3.csv")
+
+# WT1$Date.Time <- as.POSIXct(WT1$Date.Time, format = "%m/%d/%y %H:%M") 
+
+
+WT3.1 <- WT3 %>% filter(DateTime <= DATE2 & DateTime >= DATE1)
+WT3.2 <- WT3 %>% filter(DateTime <= DATE3 & DateTime >= DATE2)
+WT3.3 <- WT3 %>% filter(DateTime <= DATE4 & DateTime >= DATE3)
+
+#average height in cm
+WT3.1_meanH <- (mean(WT3.1$waterDepth_m, na.rm = TRUE) + 0.739)*100
+WT3.2_meanH <- (mean(WT3.2$waterDepth_m, na.rm = TRUE) + 0.739)*100
+WT3.3_meanH<- (mean(WT3.3$waterDepth_m, na.rm = TRUE) + 0.739)*100
+
+#average depth in cm
+WT3.1_meanD <- mean(WT3.1$waterDepth_m, na.rm = TRUE)*100
+WT3.2_meanD <- mean(WT3.2$waterDepth_m, na.rm = TRUE)*100
+WT3.3_meanD <- mean(WT3.3$waterDepth_m, na.rm = TRUE)*100
+
+
+```
+
+WAIT!! CONSIDER ACTUALLY USING THE WELLS THAT ARE CLOSEST??
+YES! do this.
+
+
+
+
+RESIN DATA
+```{r}
+
+DEP1 <- read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/Deployment1.csv")
+DEP2 <- read_csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/Deployment2.csv")
+DEP3 <- read.csv("~/Documents/VT/Data/MyData/Code/Resins/data/processed/Deployment3.csv")
+
+
+
+#THIS IS ONLY DOC DATA FOR TWO DEPLOYMENTS 
+#CHANGE THIS TO REFLECT NUMBERIC THEN ADD THE COLUMN IN TO THE MATTH ON THE FUNCTION. 3:31
+#Add DOC data for more deployments
+DEP1$DOC <- c(90.37, 27.82, 10.52, 351.23, 265.75, 12.82, 0, 0, 0)
+DEP2$DOC <- c(377.91, 171.24, 32.61, 761.44, 385.07, 45.00, 0, 0, 0)
+DEP3$DOC <- c(24.11, 147.89, 15.58, 1298.50, 155.18, 18.60, 14.40, 212.46, 409.13)
+
+
+
+```
+
+VERSION 2:
+
+```{r}
+
+area42_2 = 596 #m2 to ha
+area42_3 = 994 #m2 to ha
+area42_4 = 2626 #m2 to ha
+
+DAYS1 = 52 #days
+DAYS2 = 116 #days
+DAYS3 = 114 #days
+
+RESIN_height = 5.08 #cm
+RESIN_width = 5.08 #cm
+DEM_width = 100 #cm
+
+# mg/area * 1/days * 1g/1000mg * 1kg/1000g * WTheight/resinheight * DEM width cm/resinwidth
+
+flux_fun <- function(DEP, AREA, DAYS, WT_mean, RESIN_height, DEM_width, RESIN_width){
+  DEP <- DEP %>% filter(Well_id == WELL)
+  DEP <- as.matrix(DEP[,2:9]) #just elements of interest
+  
+  FLUX <- (DEP / (AREA * DAYS)) * (WT_mean/RESIN_height) * (DEM_width/RESIN_width) * 0.01
+    
+  return(FLUX)
+    
+}
+
+
+```
+
+VERSION 2.2:
+```{r}
+
+
+WELL = "42_2"
+f1 <- flux_fun(DEP1, area42_2, DAYS1, WT1.1_mean, RESIN_height, DEM_width, RESIN_width)
+f2 <- flux_fun(DEP2, area42_2, DAYS2, WT1.2_mean, RESIN_height, DEM_width, RESIN_width)
+f3 <- flux_fun(DEP3, area42_2, DAYS3, WT1.3_mean, RESIN_height, DEM_width, RESIN_width)
+flux42_2 <- f1+f2+f3
+
+
+WELL = "42_3"
+f1 <- flux_fun(DEP1, WELL, WT2.1_mean, DEPTIME1, area42_3, DEM_FACTOR)
+f2 <- flux_fun(DEP2, WELL, WT2.2_mean, DEPTIME2, area42_3, DEM_FACTOR)
+f3 <- flux_fun(DEP2, WELL, WT2.3_mean, DEPTIME3, area42_3, DEM_FACTOR)
+flux42_3 <- f1+f2+f3
+
+
+WELL = "42_4"
+f1 <- flux_fun(DEP1, WELL, WT3.1_mean, DEPTIME1, area42_4, DEM_FACTOR)
+f2 <- flux_fun(DEP2, WELL, WT3.2_mean, DEPTIME2, area42_4, DEM_FACTOR)
+f3 <- flux_fun(DEP2, WELL, WT3.3_mean, DEPTIME3, area42_4, DEM_FACTOR)
+flux42_4 <- f1+f2+f3
+
+
+
+```
+
+
+
+
+
+
+VERSION 1:
+```{r}
+#Function for each deployment, add third deployment.
+
+
+
+#VOLUME_FACTOR = 1.0501 #for scaling up to whole cylinder if the CPVC wasnt there. 
+DEM_FACTOR = 19.23306 #width factor, 1/0.0519938 (1m dem / width of well)     ##m/m, unit-less...
+#DEPTIME <- (51 + 116)/365   #for two deployments    ##yrs
+DEPTIME1 = 52/365
+DEPTIME2 = 116/365
+DEPTIME3 = 114/365
+DEPTIME4 = 84/365
+area42_2 = 596    ##m2
+area42_3 = 994
+area42_4 = 2626
+area52_2 = 1554
+area52_3 = 2895
+area52_4 = 4534
+
+
+flux_fun <- function(DEP, WELL, WT, DEPTIME, AREA, DEM){
+  DEP <- DEP %>% filter(Well_id == WELL)
+  DEP <- as.matrix(DEP[,3:31]) #removes ids
+  
+  FLUX <- (DEP / (DEPTIME * AREA)) * WT * DEM *0.01 #kg/ha yr
+    
+  return(FLUX)
+    
+}
+
+
+
+
+```
+
+
+```{r}
+
+WELL = "42_2"
+f1 <- flux_fun(DEP1, WELL, WT1.1_mean, DEPTIME1, area42_2, DEM_FACTOR)
+f2 <- flux_fun(DEP2, WELL, WT1.2_mean, DEPTIME2, area42_2, DEM_FACTOR)
+f3 <- flux_fun(DEP2, WELL, WT1.3_mean, DEPTIME3, area42_2, DEM_FACTOR)
+flux42_2 <- f1+f2+f3
+
+
+WELL = "42_3"
+f1 <- flux_fun(DEP1, WELL, WT2.1_mean, DEPTIME1, area42_3, DEM_FACTOR)
+f2 <- flux_fun(DEP2, WELL, WT2.2_mean, DEPTIME2, area42_3, DEM_FACTOR)
+f3 <- flux_fun(DEP2, WELL, WT2.3_mean, DEPTIME3, area42_3, DEM_FACTOR)
+flux42_3 <- f1+f2+f3
+
+
+WELL = "42_4"
+f1 <- flux_fun(DEP1, WELL, WT3.1_mean, DEPTIME1, area42_4, DEM_FACTOR)
+f2 <- flux_fun(DEP2, WELL, WT3.2_mean, DEPTIME2, area42_4, DEM_FACTOR)
+f3 <- flux_fun(DEP2, WELL, WT3.3_mean, DEPTIME3, area42_4, DEM_FACTOR)
+flux42_4 <- f1+f2+f3
+
+
+
+```
+
+
+
